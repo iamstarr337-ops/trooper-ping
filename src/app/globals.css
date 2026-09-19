@@ -41,18 +41,18 @@ body {
   margin: 10px 12px;
 }
 
-/* Soft blur overlay for free / demo map */
+/* Light demo tint — map stays readable (no blur) */
 .tp-demo-blur {
   background: linear-gradient(
     180deg,
-    rgba(9, 9, 11, 0.15) 0%,
-    rgba(9, 9, 11, 0.05) 40%,
-    rgba(9, 9, 11, 0.35) 100%
+    rgba(9, 9, 11, 0.08) 0%,
+    rgba(9, 9, 11, 0.02) 50%,
+    rgba(9, 9, 11, 0.2) 100%
   );
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .tp-demo-map {
-  filter: saturate(0.85);
+  filter: none;
 }
