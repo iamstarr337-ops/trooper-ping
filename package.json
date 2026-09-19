@@ -7,9 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "stripe:setup": "tsx scripts/stripe-setup.ts"
+    "stripe:setup": "tsx scripts/stripe-setup.ts",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.9",
+    "@capacitor/geolocation": "^7.1.8",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6",
     "leaflet": "^1.9.4",
     "next": "14.2.35",
     "react": "^18",
@@ -19,6 +27,8 @@
     "uuid": "^14.0.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/cli": "^7.6.9",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "^18",

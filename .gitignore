@@ -46,3 +46,19 @@ data/subscribers.json
 .env.local.template
 
 PASTE_KEYS_HERE.txt
+
+# Capacitor
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+android/.idea/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Local deploy/meta (do not commit)
+.render-service.json
+.stripe-live-meta.json
