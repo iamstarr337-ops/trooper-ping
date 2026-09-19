@@ -31,5 +31,8 @@
     "tsx": "^4.23.13",
     "typescript": "^5"
   },
-  "description": "Crowdsourced live highway state-trooper / LEO sightings for US drivers"
+  "description": "Crowdsourced live highway state-trooper / LEO sightings for US drivers",
+  "engines": {
+    "node": ">=18"
+  }
 }

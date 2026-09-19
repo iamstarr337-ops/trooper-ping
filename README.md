@@ -137,3 +137,21 @@ This web MVP can be wrapped for iOS/Android later with [Capacitor](https://capac
 ## Disclaimer
 
 User-generated content. Obey laws. No unsafe driving. Not affiliated with any LEO agency.
+
+## Deploy on Render (Free)
+
+1. Push this repo to GitHub.
+2. Go to https://dashboard.render.com → New → Blueprint / Web Service.
+3. Connect `iamstarr337-ops/trooper-ping`.
+4. Runtime: Node. Build: `npm install && npm run build`. Start: `npm run start`.
+5. Plan: **Free**.
+6. Set env vars (from your local `.env.local` — Test mode OK for now):
+   - `STRIPE_SECRET_KEY`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   - `STRIPE_PRICE_ID`
+   - `NEXT_PUBLIC_APP_URL` = your Render URL (e.g. `https://trooper-ping.onrender.com`)
+   - `SESSION_SECRET` = long random string
+   - `STRIPE_WEBHOOK_SECRET` (optional until you add a webhook endpoint in Stripe)
+7. Deploy. First load after idle may take ~1 minute (free tier sleep).
+
+Note: Free web disks are ephemeral — `data/pings.json` can reset when the service restarts. Fine for demo; use a DB later for production.
