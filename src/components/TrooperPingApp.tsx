@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Ping, DEFAULT_RADIUS_KM } from "@/lib/types";
+import { estimateMph, type SpeedSample } from "@/lib/gpsSpeed";
 import ReportSheet from "./ReportSheet";
 import PaywallModal from "./PaywallModal";
 import Speedometer from "./Speedometer";
@@ -39,6 +40,7 @@ export default function TrooperPingApp() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [speedMph, setSpeedMph] = useState<number | null>(null);
+  const [speedAccuracyM, setSpeedAccuracyM] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("Finding nearby pings…");
 
@@ -201,87 +203,113 @@ export default function TrooperPingApp() {
 
 
   // Continuous GPS for speedometer (+ refresh user position)
-  // Many browsers leave coords.speed null; fall back to distance/time.
-  const lastSpeedSample = useRef<{
-    lat: number;
-    lng: number;
-    t: number;
-  } | null>(null);
+  const lastSpeedSample = useRef<SpeedSample | null>(null);
+  const smoothedMphRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!meLoaded || !navigator.geolocation) return;
+    if (!meLoaded) return;
+    let cancelled = false;
+    let watchId: string | number | null = null;
+    let usedCapacitor = false;
 
-    const toRad = (d: number) => (d * Math.PI) / 180;
-    const metersBetween = (
-      aLat: number,
-      aLng: number,
-      bLat: number,
-      bLng: number
-    ) => {
-      const R = 6371000;
-      const dLat = toRad(bLat - aLat);
-      const dLng = toRad(bLng - aLng);
-      const x =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(aLat)) *
-          Math.cos(toRad(bLat)) *
-          Math.sin(dLng / 2) ** 2;
-      return 2 * R * Math.asin(Math.min(1, Math.sqrt(x)));
+    const onReading = (coords: {
+      latitude: number;
+      longitude: number;
+      speed: number | null;
+      accuracy: number | null;
+      timestamp?: number;
+    }) => {
+      if (cancelled) return;
+      const now = coords.timestamp || Date.now();
+      setUserPos({ lat: coords.latitude, lng: coords.longitude });
+
+      const { mph, sample, source } = estimateMph({
+        lat: coords.latitude,
+        lng: coords.longitude,
+        t: now,
+        speedMs: coords.speed,
+        accuracy: coords.accuracy,
+        prev: lastSpeedSample.current,
+        smoothedMph: smoothedMphRef.current,
+      });
+
+      if (source !== "hold") {
+        lastSpeedSample.current = sample;
+      }
+      smoothedMphRef.current = mph;
+      setSpeedMph(mph);
+      setSpeedAccuracyM(sample.accuracy);
     };
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude, speed, accuracy } = pos.coords;
-        const now = pos.timestamp || Date.now();
-        setUserPos({ lat: latitude, lng: longitude });
-
-        let mph: number | null = null;
-        if (speed != null && !Number.isNaN(speed) && speed >= 0) {
-          mph = speed * 2.23693629;
-        } else {
-          const prev = lastSpeedSample.current;
-          if (prev) {
-            const dtSec = (now - prev.t) / 1000;
-            // Ignore noisy/too-close samples; require a short interval
-            if (dtSec >= 0.75 && dtSec <= 15) {
-              const meters = metersBetween(
-                prev.lat,
-                prev.lng,
-                latitude,
-                longitude
-              );
-              // Ignore GPS jitter under ~ accuracy floor
-              const minMove = Math.max(2.5, Math.min(accuracy || 25, 40) * 0.35);
-              if (meters >= minMove) {
-                mph = (meters / dtSec) * 2.23693629;
-              } else {
-                mph = 0;
-              }
+    (async () => {
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (Capacitor.isNativePlatform()) {
+          const { Geolocation } = await import("@capacitor/geolocation");
+          usedCapacitor = true;
+          watchId = await Geolocation.watchPosition(
+            {
+              enableHighAccuracy: true,
+              timeout: 20_000,
+              maximumAge: 0,
+            },
+            (pos, err) => {
+              if (err || !pos) return;
+              onReading({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                speed:
+                  pos.coords.speed == null || Number.isNaN(pos.coords.speed)
+                    ? null
+                    : pos.coords.speed,
+                accuracy: pos.coords.accuracy ?? null,
+                timestamp: pos.timestamp,
+              });
             }
-          } else {
-            // First fix — show 0 so the gauge is alive, not a dash
-            mph = 0;
+          );
+          return;
+        }
+      } catch {
+        /* fall through to browser geolocation */
+      }
+
+      if (!navigator.geolocation) return;
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          onReading({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            speed:
+              pos.coords.speed == null || Number.isNaN(pos.coords.speed)
+                ? null
+                : pos.coords.speed,
+            accuracy: pos.coords.accuracy ?? null,
+            timestamp: pos.timestamp,
+          });
+        },
+        () => {
+          /* denied / timeout */
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 }
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      (async () => {
+        if (watchId == null) return;
+        if (usedCapacitor && typeof watchId === "string") {
+          try {
+            const { Geolocation } = await import("@capacitor/geolocation");
+            await Geolocation.clearWatch({ id: watchId });
+          } catch {
+            /* ignore */
           }
+        } else if (typeof watchId === "number") {
+          navigator.geolocation.clearWatch(watchId);
         }
-
-        lastSpeedSample.current = {
-          lat: latitude,
-          lng: longitude,
-          t: now,
-        };
-
-        if (mph != null) {
-          // Soft cap absurd GPS spikes
-          setSpeedMph(Math.min(mph, 120));
-        }
-      },
-      () => {
-        /* denied / timeout — keep last reading */
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
+      })();
+    };
   }, [meLoaded]);
 
 
@@ -504,7 +532,7 @@ export default function TrooperPingApp() {
       <div className="absolute bottom-0 inset-x-0 z-20 pb-[max(1rem,env(safe-area-inset-bottom))] px-4 pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-center gap-3 max-w-md mx-auto">
           <div className="flex w-full items-end gap-3">
-            <Speedometer mph={speedMph} active={speedMph != null} />
+            <Speedometer mph={speedMph} active={speedMph != null} accuracyM={speedAccuracyM} />
             <button
               type="button"
               onClick={locate}
