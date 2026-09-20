@@ -97,7 +97,7 @@ export default function PaywallModal({
         </button>
 
         <p className="text-[10px] text-zinc-500 mt-3 text-center leading-relaxed">
-          Secure checkout via Stripe. Test card: 4242 4242 4242 4242.
+          Secure checkout via Stripe.
         </p>
       </div>
     </div>
