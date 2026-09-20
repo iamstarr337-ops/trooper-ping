@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Ping, DEFAULT_RADIUS_KM } from "@/lib/types";
 import ReportSheet from "./ReportSheet";
@@ -201,24 +201,84 @@ export default function TrooperPingApp() {
 
 
   // Continuous GPS for speedometer (+ refresh user position)
+  // Many browsers leave coords.speed null; fall back to distance/time.
+  const lastSpeedSample = useRef<{
+    lat: number;
+    lng: number;
+    t: number;
+  } | null>(null);
+
   useEffect(() => {
     if (!meLoaded || !navigator.geolocation) return;
 
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const metersBetween = (
+      aLat: number,
+      aLng: number,
+      bLat: number,
+      bLng: number
+    ) => {
+      const R = 6371000;
+      const dLat = toRad(bLat - aLat);
+      const dLng = toRad(bLng - aLng);
+      const x =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(aLat)) *
+          Math.cos(toRad(bLat)) *
+          Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.min(1, Math.sqrt(x)));
+    };
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, speed } = pos.coords;
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+        const now = pos.timestamp || Date.now();
         setUserPos({ lat: latitude, lng: longitude });
-        // coords.speed is meters/second; null when the device cannot compute it
-        if (speed == null || Number.isNaN(speed) || speed < 0) {
-          setSpeedMph(null);
+
+        let mph: number | null = null;
+        if (speed != null && !Number.isNaN(speed) && speed >= 0) {
+          mph = speed * 2.23693629;
         } else {
-          setSpeedMph(speed * 2.23693629);
+          const prev = lastSpeedSample.current;
+          if (prev) {
+            const dtSec = (now - prev.t) / 1000;
+            // Ignore noisy/too-close samples; require a short interval
+            if (dtSec >= 0.75 && dtSec <= 15) {
+              const meters = metersBetween(
+                prev.lat,
+                prev.lng,
+                latitude,
+                longitude
+              );
+              // Ignore GPS jitter under ~ accuracy floor
+              const minMove = Math.max(2.5, Math.min(accuracy || 25, 40) * 0.35);
+              if (meters >= minMove) {
+                mph = (meters / dtSec) * 2.23693629;
+              } else {
+                mph = 0;
+              }
+            }
+          } else {
+            // First fix — show 0 so the gauge is alive, not a dash
+            mph = 0;
+          }
+        }
+
+        lastSpeedSample.current = {
+          lat: latitude,
+          lng: longitude,
+          t: now,
+        };
+
+        if (mph != null) {
+          // Soft cap absurd GPS spikes
+          setSpeedMph(Math.min(mph, 120));
         }
       },
       () => {
         /* denied / timeout — keep last reading */
       },
-      { enableHighAccuracy: true, maximumAge: 1_000, timeout: 15_000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);

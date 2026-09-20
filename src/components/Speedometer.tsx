@@ -33,7 +33,7 @@ export default function Speedometer({ mph, active }: SpeedometerProps) {
         </span>
       </div>
       <p className="mt-1 text-[9px] text-zinc-500 text-center max-w-[6.5rem] leading-tight">
-        GPS estimate · eyes on road
+        GPS · eyes on road
       </p>
     </div>
   );
