@@ -54,14 +54,11 @@ export default function PaywallModal({
         </div>
 
         <p className="text-sm text-zinc-400 mb-4 leading-relaxed">
-          Free tier: Austin demo map with ads. Pro removes ads and unlocks the
-          live nationwide feed, reporting, and flagging.
+          Free preview shows a blurred Austin demo only. Subscribe for the full
+          live map, nearby reports, and the ability to ping &amp; flag.
         </p>
 
         <ul className="text-sm text-zinc-300 space-y-2 mb-5">
-          <li className="flex gap-2">
-            <span className="text-sky-400">✓</span> No ads
-          </li>
           <li className="flex gap-2">
             <span className="text-sky-400">✓</span> Full US map + nearby live feed
           </li>

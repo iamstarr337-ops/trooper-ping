@@ -75,15 +75,6 @@ export default function PrivacyPage() {
             (Play Billing / StoreKit) instead of or in addition to Stripe.
           </p>
 
-          <h3 className="text-zinc-100 font-semibold pt-2">Advertising</h3>
-          <p>
-            On the <strong>free tier</strong>, we may show third-party ads (for
-            example via Google AdSense or AdMob). Ad partners may use cookies or
-            device identifiers to serve and measure ads per their own policies.
-            <strong>TrooperPing Pro</strong> is ad-free. You can upgrade to remove
-            ads.
-          </p>
-
           <h3 className="text-zinc-100 font-semibold pt-2">Sighting reports</h3>
           <p>
             Reports you submit may be shown to other users on the map. Reports
