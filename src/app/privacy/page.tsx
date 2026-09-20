@@ -33,8 +33,7 @@ export default function PrivacyPage() {
         <div className="space-y-4 text-sm text-zinc-300 leading-relaxed">
           <p className="text-amber-200/90 text-xs border border-amber-500/30 rounded-lg px-3 py-2 bg-amber-500/5">
             MVP draft for store listings and transparency. This is not a
-            substitute for counsel-reviewed legal text. Last updated: September
-            20, 2026.
+            substitute for counsel-reviewed legal text. Last updated: September 20, 2026.
           </p>
 
           <p>
@@ -74,6 +73,15 @@ export default function PrivacyPage() {
             policy applies to payment data they process. In Google Play / App
             Store apps, digital subscriptions may later use in-app purchases
             (Play Billing / StoreKit) instead of or in addition to Stripe.
+          </p>
+
+          <h3 className="text-zinc-100 font-semibold pt-2">Advertising</h3>
+          <p>
+            On the <strong>free tier</strong>, we may show third-party ads (for
+            example via Google AdSense or AdMob). Ad partners may use cookies or
+            device identifiers to serve and measure ads per their own policies.
+            <strong>TrooperPing Pro</strong> is ad-free. You can upgrade to remove
+            ads.
           </p>
 
           <h3 className="text-zinc-100 font-semibold pt-2">Sighting reports</h3>

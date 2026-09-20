@@ -8,6 +8,7 @@ import { estimateMph, type SpeedSample } from "@/lib/gpsSpeed";
 import ReportSheet from "./ReportSheet";
 import PaywallModal from "./PaywallModal";
 import Speedometer from "./Speedometer";
+import FreeTierAdBanner from "./FreeTierAdBanner";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -506,7 +507,7 @@ export default function TrooperPingApp() {
                 Demo map · Austin only
               </p>
               <p className="text-[10px] text-sky-100/90 truncate">
-                Subscribe for live nationwide feed &amp; reporting
+                Free has ads · Pro = no ads + nationwide live feed
               </p>
             </div>
             <span className="shrink-0 text-xs font-extrabold bg-white text-sky-700 rounded-lg px-2.5 py-1.5">
@@ -531,6 +532,11 @@ export default function TrooperPingApp() {
       {/* Bottom controls */}
       <div className="absolute bottom-0 inset-x-0 z-20 pb-[max(1rem,env(safe-area-inset-bottom))] px-4 pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-center gap-3 max-w-md mx-auto">
+          {meLoaded && !subscribed && (
+            <FreeTierAdBanner
+              onUpgrade={() => setPaywallOpen(true)}
+            />
+          )}
           <div className="flex w-full items-end gap-3">
             <Speedometer mph={speedMph} active={speedMph != null} accuracyM={speedAccuracyM} />
             <button
