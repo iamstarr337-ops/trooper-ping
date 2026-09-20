@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Ping, DEFAULT_RADIUS_KM } from "@/lib/types";
 import ReportSheet from "./ReportSheet";
 import PaywallModal from "./PaywallModal";
+import Speedometer from "./Speedometer";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -37,6 +38,7 @@ export default function TrooperPingApp() {
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [speedMph, setSpeedMph] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("Finding nearby pings…");
 
@@ -196,6 +198,32 @@ export default function TrooperPingApp() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meLoaded, subscribed]);
+
+
+  // Continuous GPS for speedometer (+ refresh user position)
+  useEffect(() => {
+    if (!meLoaded || !navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, speed } = pos.coords;
+        setUserPos({ lat: latitude, lng: longitude });
+        // coords.speed is meters/second; null when the device cannot compute it
+        if (speed == null || Number.isNaN(speed) || speed < 0) {
+          setSpeedMph(null);
+        } else {
+          setSpeedMph(speed * 2.23693629);
+        }
+      },
+      () => {
+        /* denied / timeout — keep last reading */
+      },
+      { enableHighAccuracy: true, maximumAge: 1_000, timeout: 15_000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [meLoaded]);
+
 
   async function startCheckout() {
     setCheckoutBusy(true);
@@ -415,7 +443,8 @@ export default function TrooperPingApp() {
       {/* Bottom controls */}
       <div className="absolute bottom-0 inset-x-0 z-20 pb-[max(1rem,env(safe-area-inset-bottom))] px-4 pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-center gap-3 max-w-md mx-auto">
-          <div className="flex w-full gap-2">
+          <div className="flex w-full items-end gap-3">
+            <Speedometer mph={speedMph} active={speedMph != null} />
             <button
               type="button"
               onClick={locate}

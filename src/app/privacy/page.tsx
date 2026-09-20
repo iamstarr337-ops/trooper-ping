@@ -48,12 +48,13 @@ export default function PrivacyPage() {
             Location
           </h3>
           <p>
-            If you use locate-me or map features, we may process{" "}
-            <strong>precise or approximate location</strong> from your device
-            (with your permission) to center the map, show nearby sightings, or
-            attach a location to a report you submit. You can deny location
-            permission in your browser or device settings; some features may not
-            work without it.
+            If you use locate-me, the map, or the in-app speedometer, we may
+            process <strong>precise or approximate location</strong> (and
+            derived GPS speed) from your device with your permission — to center
+            the map, show nearby sightings, estimate mph, or attach a location
+            to a report you submit. Speed is a GPS estimate only, not a
+            certified speedometer. You can deny location permission in your
+            browser or device settings; some features may not work without it.
           </p>
 
           <h3 className="text-zinc-100 font-semibold pt-2">
