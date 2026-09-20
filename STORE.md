@@ -31,23 +31,18 @@ Android is first. Ship an AAB to Play; iOS Capacitor shell can follow later.
   compliant wrapper). Shipping paid digital subscriptions via Stripe-only
   inside the store APK/IPA risks rejection or removal.
 
-## Privacy policy (placeholder)
+## Privacy policy
 
-Play and App Store listings need a privacy policy URL covering:
+Live URL (paste into Play Console → App content → Privacy policy):
 
-- Location data (locate-me / map)
-- Account / email if collected
-- Payment processor (Stripe on web; IAP on store later)
-- Crash / analytics if added later
+**https://trooper-ping.onrender.com/privacy**
 
-**TODO:** Host a real policy (e.g. `/privacy` on the Render site) and paste the
-URL into Play Console → App content → Privacy policy.
+Covers location (locate-me / map), account/session for subscriptions, Stripe on
+web (IAP later on store), and that we do not sell personal data. Contact:
+iamstarr337@gmail.com.
 
-Suggested draft outline only — replace with counsel-reviewed text before launch:
-
-> TrooperPing shows crowd-sourced highway LEO sightings. We may process precise
-> or approximate location when you use locate-me, and account/payment data when
-> you subscribe. We do not sell personal data. Contact: [YOUR EMAIL].
+**Note:** The page is an MVP draft for listings — have counsel review before a
+full commercial launch.
 
 ## Build release AAB (Android App Bundle)
 

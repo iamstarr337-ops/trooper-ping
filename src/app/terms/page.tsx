@@ -47,6 +47,14 @@ export default function TermsPage() {
             TrooperPing you agree to these terms and accept all risk. If you
             disagree, do not use the app.
           </p>
+          <p>
+            See also our{" "}
+            <Link href="/privacy" className="text-sky-400 hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
           <p className="text-zinc-500 text-xs pt-4">
             MVP build · Not affiliated with any law-enforcement agency.
           </p>

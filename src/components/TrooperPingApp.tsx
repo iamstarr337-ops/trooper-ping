@@ -358,6 +358,12 @@ export default function TrooperPingApp() {
               </button>
             )}
             <Link
+              href="/privacy"
+              className="text-[11px] text-zinc-400 hover:text-sky-300 underline-offset-2 hover:underline"
+            >
+              Privacy
+            </Link>
+            <Link
               href="/terms"
               className="text-[11px] text-zinc-400 hover:text-sky-300 underline-offset-2 hover:underline"
             >
