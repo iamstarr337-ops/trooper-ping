@@ -62,3 +62,6 @@ android/.idea/
 # Local deploy/meta (do not commit)
 .render-service.json
 .stripe-live-meta.json
+/workspace/secrets/
+dist/
+[android/keystore.properties,android/local.properties,dist/,*.jks,*.keystore,keystore.properties]
