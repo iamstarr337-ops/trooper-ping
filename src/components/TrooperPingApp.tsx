@@ -322,9 +322,13 @@ export default function TrooperPingApp() {
       <header className="absolute top-0 inset-x-0 z-20 pointer-events-none">
         <div className="pointer-events-auto mx-3 mt-3 flex items-center justify-between rounded-2xl bg-zinc-900/90 border border-zinc-700/80 backdrop-blur-md px-4 py-3 shadow-lg">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-2xl shrink-0" aria-hidden>
-              🚓
-            </span>
+            <img
+              src="/brand/logo.png"
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-amber-500/40"
+            />
             <div className="min-w-0">
               <h1 className="text-base font-extrabold tracking-tight leading-none">
                 Trooper<span className="text-sky-400">Ping</span>

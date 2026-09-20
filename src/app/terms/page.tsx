@@ -14,10 +14,21 @@ export default function TermsPage() {
         >
           ← Back to map
         </Link>
-        <h1 className="text-2xl font-extrabold mb-1">
-          Trooper<span className="text-sky-400">Ping</span>
-        </h1>
-        <h2 className="text-lg text-zinc-400 mb-6">Terms & Disclaimer</h2>
+        <div className="flex items-center gap-3 mb-6">
+          <img
+            src="/brand/logo.png"
+            alt="TrooperPing"
+            width={72}
+            height={72}
+            className="h-[72px] w-[72px] rounded-full object-cover ring-1 ring-amber-500/40"
+          />
+          <div>
+            <h1 className="text-2xl font-extrabold mb-0.5">
+              Trooper<span className="text-sky-400">Ping</span>
+            </h1>
+            <h2 className="text-lg text-zinc-400">Terms & Disclaimer</h2>
+          </div>
+        </div>
 
         <div className="space-y-4 text-sm text-zinc-300 leading-relaxed">
           <p>

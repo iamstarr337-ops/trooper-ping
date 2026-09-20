@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Crowdsourced live highway state-trooper / LEO sightings for US drivers.",
     start_url: "/",
     display: "standalone",
-    background_color: "#09090b",
-    theme_color: "#0ea5e9",
+    background_color: "#0B1B33",
+    theme_color: "#0B1B33",
     orientation: "portrait-primary",
     icons: [
       {

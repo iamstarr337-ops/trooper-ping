@@ -26,6 +26,15 @@ export default function PaywallModal({
         onClick={onClose}
       />
       <div className="relative w-full max-w-md mx-3 mb-3 sm:mb-0 rounded-2xl bg-zinc-900 border border-zinc-700 shadow-2xl p-6 text-zinc-100">
+        <div className="flex justify-center mb-4">
+          <img
+            src="/brand/logo.png"
+            alt="TrooperPing"
+            width={96}
+            height={96}
+            className="h-24 w-24 rounded-full object-cover ring-2 ring-amber-500/50 shadow-lg"
+          />
+        </div>
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">
