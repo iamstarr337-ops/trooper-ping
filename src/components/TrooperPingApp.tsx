@@ -8,6 +8,11 @@ import { estimateMph, type SpeedSample } from "@/lib/gpsSpeed";
 import ReportSheet from "./ReportSheet";
 import PaywallModal from "./PaywallModal";
 import Speedometer from "./Speedometer";
+import type { Camera } from "@/lib/cameras/types";
+import {
+  MID_SOUTH_OVERVIEW,
+  isFarFromCameraStates,
+} from "@/lib/cameras/types";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -43,11 +48,58 @@ export default function TrooperPingApp() {
   const [speedAccuracyM, setSpeedAccuracyM] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("Finding nearby pings…");
+  const [showCameras, setShowCameras] = useState(false);
+  const [cameras, setCameras] = useState<Camera[]>([]);
+  const [camerasLoading, setCamerasLoading] = useState(false);
+  const [cameraCredits, setCameraCredits] = useState<string[]>([]);
+  const camerasFlewRef = useRef(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3200);
   }, []);
+
+  const fetchCameras = useCallback(async () => {
+    setCamerasLoading(true);
+    try {
+      const res = await fetch("/api/cameras?states=MS,TN");
+      if (!res.ok) throw new Error("cameras failed");
+      const data = await res.json();
+      setCameras(data.cameras || []);
+      setCameraCredits(data.credits || []);
+      const ms = data.counts?.MS ?? 0;
+      const tn = data.counts?.TN ?? 0;
+      showToast(`Cameras · MS ${ms} · TN ${tn}`);
+      return data.cameras || [];
+    } catch {
+      showToast("Could not load cameras");
+      return [] as Camera[];
+    } finally {
+      setCamerasLoading(false);
+    }
+  }, [showToast]);
+
+  const toggleCameras = useCallback(async () => {
+    if (showCameras) {
+      setShowCameras(false);
+      return;
+    }
+    setShowCameras(true);
+    const list = cameras.length ? cameras : await fetchCameras();
+    if (!camerasFlewRef.current) {
+      const refPos = userPos || center;
+      if (isFarFromCameraStates(refPos.lat, refPos.lng) || list.length > 0) {
+        if (isFarFromCameraStates(refPos.lat, refPos.lng)) {
+          setCenter({
+            lat: MID_SOUTH_OVERVIEW.lat,
+            lng: MID_SOUTH_OVERVIEW.lng,
+          });
+          setFlyTo({ ...MID_SOUTH_OVERVIEW });
+          camerasFlewRef.current = true;
+        }
+      }
+    }
+  }, [showCameras, cameras, fetchCameras, userPos, center]);
 
   const refreshMe = useCallback(async () => {
     try {
@@ -525,12 +577,54 @@ export default function TrooperPingApp() {
           onFlag={handleFlag}
           flyTo={flyTo}
           demo={demo || !subscribed}
+          cameras={cameras}
+          showCameras={showCameras}
         />
       </div>
 
       {/* Bottom controls */}
       <div className="absolute bottom-0 inset-x-0 z-20 pb-[max(1rem,env(safe-area-inset-bottom))] px-4 pointer-events-none">
         <div className="pointer-events-auto flex flex-col items-center gap-3 max-w-md mx-auto">
+          <div className="flex w-full items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleCameras}
+              disabled={camerasLoading}
+              aria-pressed={showCameras}
+              className={`flex-1 rounded-xl border py-2.5 text-xs font-semibold shadow-lg disabled:opacity-60 ${
+                showCameras
+                  ? "bg-slate-600/95 border-sky-400/50 text-sky-100"
+                  : "bg-zinc-900/95 border-zinc-600 text-zinc-200 hover:bg-zinc-800"
+              }`}
+            >
+              {camerasLoading
+                ? "Loading cameras…"
+                : showCameras
+                  ? "Cameras on"
+                  : "Cameras"}
+            </button>
+            {showCameras && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCenter({
+                    lat: MID_SOUTH_OVERVIEW.lat,
+                    lng: MID_SOUTH_OVERVIEW.lng,
+                  });
+                  setFlyTo({ ...MID_SOUTH_OVERVIEW });
+                  camerasFlewRef.current = true;
+                }}
+                className="shrink-0 rounded-xl bg-zinc-900/95 border border-zinc-600 px-3 py-2.5 text-[11px] font-semibold text-zinc-300 hover:bg-zinc-800 shadow-lg"
+              >
+                Jump MS/TN
+              </button>
+            )}
+          </div>
+          {showCameras && cameraCredits.length > 0 && (
+            <p className="text-[9px] text-zinc-500 text-center px-2 leading-snug">
+              Feeds: {cameraCredits.join(" · ")} · as-is, not affiliated
+            </p>
+          )}
           <div className="flex w-full items-end gap-3">
             <Speedometer mph={speedMph} active={speedMph != null} accuracyM={speedAccuracyM} />
             <button

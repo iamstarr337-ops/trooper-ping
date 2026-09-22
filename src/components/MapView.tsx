@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -11,6 +11,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import { Ping, pingOpacity } from "@/lib/types";
+import type { Camera } from "@/lib/cameras/types";
 import "leaflet/dist/leaflet.css";
 
 function Recenter({
@@ -60,12 +61,126 @@ function trooperIcon(type: string, opacity: number) {
   });
 }
 
+function cameraIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      width:22px;height:22px;border-radius:6px;
+      background:#334155;border:2px solid #94a3b8;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 1px 6px rgba(0,0,0,0.45);
+    " title="Camera">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2" y="7" width="14" height="10" rx="2" fill="#94a3b8"/>
+        <path d="M16 10l5-2v8l-5-2V10z" fill="#64748b"/>
+        <circle cx="9" cy="12" r="2.5" fill="#1e293b"/>
+      </svg>
+    </div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
+  });
+}
+
 function ageLabel(createdAt: string): string {
   const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   return `${hrs}h ${mins % 60}m ago`;
+}
+
+function CameraPopupBody({ camera }: { camera: Camera }) {
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(
+    camera.snapshotUrl ?? null
+  );
+  const [videoUrl, setVideoUrl] = useState<string | null>(
+    camera.videoUrl ?? null
+  );
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSnapshotUrl(camera.snapshotUrl ?? null);
+    setVideoUrl(camera.videoUrl ?? null);
+    setErr(null);
+
+    if (camera.state !== "MS") return;
+    if (camera.snapshotUrl) return;
+
+    const siteId = camera.id.replace(/^ms-/i, "");
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/cameras/ms/${siteId}`);
+        if (!res.ok) throw new Error("load failed");
+        const data = await res.json();
+        if (cancelled) return;
+        setSnapshotUrl(data.snapshotUrl || null);
+        setVideoUrl(data.videoUrl || null);
+      } catch {
+        if (!cancelled) setErr("Snapshot unavailable");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [camera.id, camera.state, camera.snapshotUrl, camera.videoUrl]);
+
+  return (
+    <div className="text-sm min-w-[180px] max-w-[240px]">
+      <div className="font-semibold text-gray-900 leading-snug">
+        {camera.name}
+      </div>
+      <div className="text-gray-600 text-[11px] mt-0.5">{camera.credit}</div>
+      {loading && (
+        <p className="mt-2 text-[11px] text-gray-500">Loading snapshot…</p>
+      )}
+      {err && !loading && (
+        <p className="mt-2 text-[11px] text-amber-700">{err}</p>
+      )}
+      {snapshotUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={snapshotUrl}
+          alt=""
+          className="mt-2 w-full rounded border border-gray-200 bg-gray-100"
+          style={{ maxHeight: 140, objectFit: "cover" }}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      )}
+      {videoUrl && (
+        <a
+          href={videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-xs text-sky-700 underline"
+        >
+          Open video / stream
+        </a>
+      )}
+      {camera.sourceUrl && (
+        <a
+          href={camera.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 block text-[10px] text-gray-500 underline"
+        >
+          Source
+        </a>
+      )}
+      <p className="mt-2 text-[10px] text-gray-500 leading-snug">
+        As-is DOT feed; not affiliated
+      </p>
+    </div>
+  );
 }
 
 interface MapViewProps {
@@ -76,6 +191,8 @@ interface MapViewProps {
   flyTo?: { lat: number; lng: number; zoom?: number } | null;
   /** Free / demo mode — limited markers, no flag */
   demo?: boolean;
+  cameras?: Camera[];
+  showCameras?: boolean;
 }
 
 export default function MapView({
@@ -85,8 +202,11 @@ export default function MapView({
   onFlag,
   flyTo,
   demo = false,
+  cameras = [],
+  showCameras = false,
 }: MapViewProps) {
   const uIcon = useMemo(() => userIcon(), []);
+  const cIcon = useMemo(() => cameraIcon(), []);
 
   return (
     <div className="relative h-full w-full">
@@ -164,6 +284,20 @@ export default function MapView({
             </Marker>
           );
         })}
+
+        {showCameras &&
+          cameras.map((cam) => (
+            <Marker
+              key={cam.id}
+              position={[cam.lat, cam.lng]}
+              icon={cIcon}
+              zIndexOffset={-100}
+            >
+              <Popup maxWidth={260} minWidth={180}>
+                <CameraPopupBody camera={cam} />
+              </Popup>
+            </Marker>
+          ))}
       </MapContainer>
       {demo && (
         <div
