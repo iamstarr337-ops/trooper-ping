@@ -221,6 +221,14 @@ function CameraPopupBody({ camera }: { camera: Camera }) {
   const smartWayUrl = camera.state === "TN" ? tnSmartWayUrl(camera) : null;
   // TN primary link is SmartWay; skip redundant Source row.
   const showSource = camera.state !== "TN" && !!camera.sourceUrl;
+  const isHls =
+    !!videoUrl &&
+    (videoUrl.endsWith(".m3u8") || videoUrl.includes("/playlist.m3u8"));
+  const videoLinkLabel = isHls
+    ? "Open live stream (HLS)"
+    : "Open video / stream";
+  const sourceLabel =
+    camera.state === "MS" ? "View on MDOT" : "Source";
 
   return (
     <div className="text-sm min-w-[180px] max-w-[240px]">
@@ -277,7 +285,7 @@ function CameraPopupBody({ camera }: { camera: Camera }) {
             rel="noopener noreferrer"
             className="mt-2 inline-block text-xs text-sky-700 underline"
           >
-            Open video / stream
+            {videoLinkLabel}
           </a>
         )
       )}
@@ -288,7 +296,7 @@ function CameraPopupBody({ camera }: { camera: Camera }) {
           rel="noopener noreferrer"
           className="mt-1 block text-[10px] text-gray-500 underline"
         >
-          Source
+          {sourceLabel}
         </a>
       )}
       <p className="mt-2 text-[10px] text-gray-500 leading-snug">

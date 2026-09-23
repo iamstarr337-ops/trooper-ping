@@ -73,6 +73,27 @@ export async function fetchMississippiCameras(): Promise<Camera[]> {
   return out;
 }
 
+/** Derive Wowza HLS playlist from an MDOT thumbnail URL when possible. */
+function hlsFromSnapshotUrl(snapshotUrl: string | null): string | null {
+  if (!snapshotUrl) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(snapshotUrl);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (!host.includes("streamingjxn") || !host.endsWith(".mdottraffic.com")) {
+    return null;
+  }
+  const streamname = parsed.searchParams.get("streamname");
+  if (!streamname) return null;
+  const name = streamname.endsWith(".stream")
+    ? streamname
+    : `${streamname}.stream`;
+  return `https://${parsed.hostname}/rtplive/${name}/playlist.m3u8`;
+}
+
 export function parseMsBubbleHtml(html: string): {
   snapshotUrl: string | null;
   videoUrl: string | null;
@@ -88,11 +109,9 @@ export function parseMsBubbleHtml(html: string): {
     if (thumbMatch) snapshotUrl = thumbMatch[0];
   }
 
-  let videoUrl: string | null = null;
-  const streamMatch = html.match(/streamcam(?:_hq)?\.aspx\?cam=([A-Za-z0-9_.-]+)/i);
-  if (streamMatch?.[1]) {
-    videoUrl = `https://www.mdottraffic.com/streamcam.aspx?cam=${encodeURIComponent(streamMatch[1])}`;
-  }
+  // Prefer direct HLS from thumbnail host/streamname; streamcam.aspx is a
+  // maintenance interstitial and must not be used.
+  const videoUrl = hlsFromSnapshotUrl(snapshotUrl);
 
   return { snapshotUrl, videoUrl };
 }
@@ -125,6 +144,12 @@ export async function fetchMississippiBubble(
   }
   const html = await res.text();
   const parsed = parseMsBubbleHtml(html);
-  bubbleCache.set(id, { ...parsed, fetchedAt: Date.now() });
-  return parsed;
+  const videoUrl =
+    parsed.videoUrl ?? `${BUBBLE_BASE}${id}`;
+  const result = {
+    snapshotUrl: parsed.snapshotUrl,
+    videoUrl,
+  };
+  bubbleCache.set(id, { ...result, fetchedAt: Date.now() });
+  return result;
 }
