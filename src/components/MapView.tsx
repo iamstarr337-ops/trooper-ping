@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -8,11 +8,17 @@ import {
   Popup,
   CircleMarker,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
 import { Ping, pingOpacity } from "@/lib/types";
 import type { Camera } from "@/lib/cameras/types";
+import { distanceKm } from "@/lib/geo";
 import "leaflet/dist/leaflet.css";
+
+const CAMERA_BOUNDS_PAD = 0.1;
+const CAMERA_REFRESH_DEBOUNCE_MS = 175;
+const MAX_VISIBLE_CAMERAS = 280;
 
 function Recenter({
   lat,
@@ -90,6 +96,88 @@ function ageLabel(createdAt: string): string {
   return `${hrs}h ${mins % 60}m ago`;
 }
 
+function tnSmartWayUrl(camera: Camera): string {
+  const numericId = camera.id.replace(/^tn-/i, "");
+  return (
+    camera.sourceUrl ||
+    `https://smartway.tn.gov/allcams/camera/${numericId}`
+  );
+}
+
+/** Keep only cameras in (padded) viewport; hard-cap by distance to center. */
+function selectVisibleCameras(cameras: Camera[], map: L.Map): Camera[] {
+  const bounds = map.getBounds().pad(CAMERA_BOUNDS_PAD);
+  const center = map.getCenter();
+  const inBounds: Camera[] = [];
+  for (const cam of cameras) {
+    if (bounds.contains([cam.lat, cam.lng])) inBounds.push(cam);
+  }
+  if (inBounds.length <= MAX_VISIBLE_CAMERAS) return inBounds;
+
+  return inBounds
+    .map((cam) => ({
+      cam,
+      d: distanceKm(cam.lat, cam.lng, center.lat, center.lng),
+    }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, MAX_VISIBLE_CAMERAS)
+    .map((x) => x.cam);
+}
+
+function VisibleCameraLayer({
+  cameras,
+  icon,
+}: {
+  cameras: Camera[];
+  icon: L.DivIcon;
+}) {
+  const map = useMap();
+  const [visible, setVisible] = useState<Camera[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const refresh = useCallback(() => {
+    setVisible(selectVisibleCameras(cameras, map));
+  }, [cameras, map]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  useMapEvents({
+    moveend() {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(refresh, CAMERA_REFRESH_DEBOUNCE_MS);
+    },
+    zoomend() {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(refresh, CAMERA_REFRESH_DEBOUNCE_MS);
+    },
+  });
+
+  return (
+    <>
+      {visible.map((cam) => (
+        <Marker
+          key={cam.id}
+          position={[cam.lat, cam.lng]}
+          icon={icon}
+          zIndexOffset={-100}
+        >
+          <Popup maxWidth={260} minWidth={180}>
+            <CameraPopupBody camera={cam} />
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  );
+}
+
 function CameraPopupBody({ camera }: { camera: Camera }) {
   const [snapshotUrl, setSnapshotUrl] = useState<string | null>(
     camera.snapshotUrl ?? null
@@ -130,6 +218,10 @@ function CameraPopupBody({ camera }: { camera: Camera }) {
     };
   }, [camera.id, camera.state, camera.snapshotUrl, camera.videoUrl]);
 
+  const smartWayUrl = camera.state === "TN" ? tnSmartWayUrl(camera) : null;
+  // TN primary link is SmartWay; skip redundant Source row.
+  const showSource = camera.state !== "TN" && !!camera.sourceUrl;
+
   return (
     <div className="text-sm min-w-[180px] max-w-[240px]">
       <div className="font-semibold text-gray-900 leading-snug">
@@ -156,17 +248,40 @@ function CameraPopupBody({ camera }: { camera: Camera }) {
           }}
         />
       )}
-      {videoUrl && (
-        <a
-          href={videoUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-block text-xs text-sky-700 underline"
-        >
-          Open video / stream
-        </a>
+      {smartWayUrl ? (
+        <>
+          <a
+            href={smartWayUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-xs text-sky-700 underline"
+          >
+            Open on SmartWay
+          </a>
+          {videoUrl && (
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 block text-[10px] text-gray-500 underline"
+            >
+              HLS stream
+            </a>
+          )}
+        </>
+      ) : (
+        videoUrl && (
+          <a
+            href={videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-xs text-sky-700 underline"
+          >
+            Open video / stream
+          </a>
+        )
       )}
-      {camera.sourceUrl && (
+      {showSource && camera.sourceUrl && (
         <a
           href={camera.sourceUrl}
           target="_blank"
@@ -285,19 +400,9 @@ export default function MapView({
           );
         })}
 
-        {showCameras &&
-          cameras.map((cam) => (
-            <Marker
-              key={cam.id}
-              position={[cam.lat, cam.lng]}
-              icon={cIcon}
-              zIndexOffset={-100}
-            >
-              <Popup maxWidth={260} minWidth={180}>
-                <CameraPopupBody camera={cam} />
-              </Popup>
-            </Marker>
-          ))}
+        {showCameras && cameras.length > 0 && (
+          <VisibleCameraLayer cameras={cameras} icon={cIcon} />
+        )}
       </MapContainer>
       {demo && (
         <div

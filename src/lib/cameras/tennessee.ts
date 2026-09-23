@@ -22,6 +22,18 @@ function apiKey(): string {
   return process.env.TDOT_API_KEY?.trim() || PUBLIC_TDOT_KEY;
 }
 
+/** Prefer full-size snapshots over /thumbs/*.flv.png paths. */
+export function normalizeTnSnapshotUrl(
+  url: string | null | undefined
+): string | null {
+  if (!url) return null;
+  const m = url.match(
+    /^https?:\/\/tnsnapshots\.com\/thumbs\/(.+)\.flv\.png(?:\?.*)?$/i
+  );
+  if (m) return `https://tnsnapshots.com/${m[1]}.png`;
+  return url;
+}
+
 export async function fetchTennesseeCameras(): Promise<Camera[]> {
   const res = await fetch(TDOT_URL, {
     headers: { ApiKey: apiKey() },
@@ -51,10 +63,10 @@ export async function fetchTennesseeCameras(): Promise<Camera[]> {
       name,
       lat,
       lng,
-      snapshotUrl: c.thumbnailUrl || null,
+      snapshotUrl: normalizeTnSnapshotUrl(c.thumbnailUrl),
       videoUrl: c.httpsVideoUrl || null,
       credit: CREDIT_TN,
-      sourceUrl: "https://smartway.tn.gov/traffic",
+      sourceUrl: `https://smartway.tn.gov/allcams/camera/${c.id}`,
     });
   }
   return out;
